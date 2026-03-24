@@ -36,7 +36,11 @@ platforms = [
     pygame.Rect(400, 280, 150, 20),
 ]
 
-# 🔺 SPIKE PATTERN (row of spikes)
+# 🧱 Moving platform
+moving_platform = pygame.Rect(600, 220, 120, 20)
+move_dir = 1
+
+# 🔺 Spike pattern
 spikes = []
 for i in range(300, 500, 40):
     spikes.append(pygame.Rect(i, 430, 30, 20))
@@ -59,6 +63,7 @@ while running:
                 lives = 3
                 player.x, player.y = 100, 300
                 spawn_point = [100, 300]
+                velocity_y = 0
                 game_over = False
 
     if not game_over:
@@ -78,14 +83,25 @@ while running:
         velocity_y += gravity
         player.y += velocity_y
 
+        # 🧱 Move platform
+        moving_platform.x += move_dir * 2
+        if moving_platform.x < 500 or moving_platform.x > 700:
+            move_dir *= -1
+
         # Collision
         on_ground = False
-        for p in platforms:
+        all_platforms = platforms + [moving_platform]
+
+        for p in all_platforms:
             if player.colliderect(p):
                 if velocity_y > 0:
                     player.bottom = p.top
                     velocity_y = 0
                     on_ground = True
+
+                    # 🔥 Move player with platform
+                    if p == moving_platform:
+                        player.x += move_dir * 2
 
         # 💀 Death (fall)
         if player.y > HEIGHT:
@@ -108,7 +124,9 @@ while running:
     for p in platforms:
         pygame.draw.rect(screen, GREEN, p)
 
-    # 🔺 Draw spikes (triangle style)
+    pygame.draw.rect(screen, GREEN, moving_platform)
+
+    # 🔺 Draw spikes (triangle)
     for spike in spikes:
         pygame.draw.polygon(screen, SPIKE_COLOR, [
             (spike.x, spike.y + spike.height),
@@ -117,7 +135,7 @@ while running:
         ])
 
     # Draw goal
-    pygame.draw.rect(screen, (0,255,0), goal)
+    pygame.draw.rect(screen, (0, 255, 0), goal)
 
     # Draw player
     pygame.draw.rect(screen, PLAYER_COLOR, player)
