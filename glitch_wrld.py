@@ -3,7 +3,7 @@ pygame.init()
 
 WIDTH, HEIGHT = 800, 500
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Glitch World - Level 1")
+pygame.display.set_caption("Glitch World - Hard Mode")
 
 clock = pygame.time.Clock()
 font = pygame.font.SysFont(None, 30)
@@ -14,11 +14,12 @@ BG = (10, 10, 10)
 GREEN = (0, 200, 0)
 PLAYER_COLOR = (0, 255, 100)
 SPIKE_COLOR = (255, 0, 0)
+GOAL_COLOR = (0, 255, 0)
 
 # Player
 player = pygame.Rect(100, 300, 40, 40)
 velocity_y = 0
-gravity = 0.5
+gravity = 0.6   # slightly harder
 speed = 5
 on_ground = False
 
@@ -28,25 +29,29 @@ spawn_point = [100, 300]
 lives = 3
 level = 1
 game_over = False
+game_won = False
 
-# Platforms
+# Platforms (harder layout)
 platforms = [
     pygame.Rect(0, 450, 800, 50),
-    pygame.Rect(200, 350, 150, 20),
-    pygame.Rect(400, 280, 150, 20),
+    pygame.Rect(180, 360, 120, 20),
+    pygame.Rect(350, 300, 100, 20),
+    pygame.Rect(520, 240, 100, 20),
 ]
 
-# 🧱 Moving platform
-moving_platform = pygame.Rect(600, 220, 120, 20)
+# Moving platform (faster)
+moving_platform = pygame.Rect(650, 180, 100, 20)
 move_dir = 1
 
-# 🔺 Spike pattern
+# 🔺 More spikes (pattern + gaps)
 spikes = []
-for i in range(300, 500, 40):
-    spikes.append(pygame.Rect(i, 430, 30, 20))
+for i in range(200, 600, 35):
+    if i % 70 != 0:  # create gaps
+        spikes.append(pygame.Rect(i, 430, 30, 20))
 
-# Goal
-goal = pygame.Rect(750, 180, 30, 50)
+# 🎯 Goal (circle)
+goal_pos = (750, 140)
+goal_radius = 15
 
 running = True
 while running:
@@ -57,16 +62,17 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
-        # 🔄 Restart game
+        # Restart
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_r and game_over:
+            if event.key == pygame.K_r:
                 lives = 3
                 player.x, player.y = 100, 300
                 spawn_point = [100, 300]
                 velocity_y = 0
                 game_over = False
+                game_won = False
 
-    if not game_over:
+    if not game_over and not game_won:
 
         keys = pygame.key.get_pressed()
 
@@ -76,16 +82,16 @@ while running:
             player.x += speed
 
         if keys[pygame.K_SPACE] and on_ground:
-            velocity_y = -10
+            velocity_y = -11
             on_ground = False
 
         # Gravity
         velocity_y += gravity
         player.y += velocity_y
 
-        # 🧱 Move platform
-        moving_platform.x += move_dir * 2
-        if moving_platform.x < 500 or moving_platform.x > 700:
+        # Moving platform
+        moving_platform.x += move_dir * 3  # faster
+        if moving_platform.x < 500 or moving_platform.x > 720:
             move_dir *= -1
 
         # Collision
@@ -99,9 +105,8 @@ while running:
                     velocity_y = 0
                     on_ground = True
 
-                    # 🔥 Move player with platform
                     if p == moving_platform:
-                        player.x += move_dir * 2
+                        player.x += move_dir * 3
 
         # 💀 Death (fall)
         if player.y > HEIGHT:
@@ -120,13 +125,21 @@ while running:
         if lives <= 0:
             game_over = True
 
+        # 🎯 Goal collision (circle check)
+        player_center = player.center
+        dx = player_center[0] - goal_pos[0]
+        dy = player_center[1] - goal_pos[1]
+
+        if dx*dx + dy*dy < goal_radius*goal_radius:
+            game_won = True
+
     # Draw platforms
     for p in platforms:
         pygame.draw.rect(screen, GREEN, p)
 
     pygame.draw.rect(screen, GREEN, moving_platform)
 
-    # 🔺 Draw spikes (triangle)
+    # 🔺 Draw spikes
     for spike in spikes:
         pygame.draw.polygon(screen, SPIKE_COLOR, [
             (spike.x, spike.y + spike.height),
@@ -134,10 +147,10 @@ while running:
             (spike.x + spike.width, spike.y + spike.height)
         ])
 
-    # Draw goal
-    pygame.draw.rect(screen, (0, 255, 0), goal)
+    # 🎯 Draw goal (circle)
+    pygame.draw.circle(screen, GOAL_COLOR, goal_pos, goal_radius)
 
-    # Draw player
+    # Player
     pygame.draw.rect(screen, PLAYER_COLOR, player)
 
     # UI
@@ -146,12 +159,19 @@ while running:
     screen.blit(level_text, (10, 10))
     screen.blit(lives_text, (10, 40))
 
-    # Game Over screen
+    # 💀 Game Over screen
     if game_over:
         text = big_font.render("GAME OVER", True, (255,0,0))
         restart_text = font.render("Press R to Restart", True, (255,255,255))
         screen.blit(text, (280, 200))
         screen.blit(restart_text, (300, 260))
+
+    # 🎉 Win screen
+    if game_won:
+        win_text = big_font.render("LEVEL COMPLETE!", True, (0,255,0))
+        restart_text = font.render("Press R to Play Again", True, (255,255,255))
+        screen.blit(win_text, (240, 200))
+        screen.blit(restart_text, (270, 260))
 
     pygame.display.update()
 
